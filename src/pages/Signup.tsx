@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Building2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import { Building2, Mail, Lock, User, Eye, EyeOff, Phone } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export function Signup() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -27,10 +28,17 @@ export function Signup() {
       return
     }
 
+    // Validate phone number (basic validation for Canadian/US numbers)
+    const cleanPhone = phone.replace(/\D/g, '')
+    if (cleanPhone.length < 10) {
+      toast.error('Please enter a valid phone number')
+      return
+    }
+
     setLoading(true)
 
     try {
-      await signUpWithEmail(email, password, fullName)
+      await signUpWithEmail(email, password, fullName, phone)
       toast.success('Account created! Please check your email to verify.')
       navigate('/login')
     } catch (error: unknown) {
@@ -93,6 +101,22 @@ export function Signup() {
                   required
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="label">Phone Number <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="input pl-10"
+                  placeholder="+1 (416) 555-0123"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Required for rent reminders</p>
             </div>
 
             <div>

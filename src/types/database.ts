@@ -91,6 +91,28 @@ export interface Reminder {
   updated_at: string
 }
 
+export type RentReminderStatus = 'pending' | 'paid' | 'late'
+
+export interface RentReminder {
+  id: string
+  lease_id: string
+  month: string
+  base_rent: number
+  gas_amount: number
+  water_amount: number
+  hydro_amount: number
+  total_amount: number
+  status: RentReminderStatus
+  is_late: boolean
+  late_since?: string
+  tenant_notified_at?: string
+  admin_notified_at?: string
+  paid_at?: string
+  created_at: string
+  updated_at: string
+  lease?: Lease
+}
+
 export interface Database {
   public: {
     Tables: {
