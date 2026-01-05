@@ -106,7 +106,8 @@ serve(async (req) => {
       .toISOString().split('T')[0]
 
     const results = {
-      remindersCreated: 0,
+      rentRemindersCreated: 0,
+      adminRemindersCreated: 0,
       tenantNotifications: 0,
       adminNotifications: 0,
       markedLate: 0,
@@ -126,9 +127,24 @@ serve(async (req) => {
           hydro_amount,
           includes_gas,
           includes_water,
-          includes_hydro
+          includes_hydro,
+          tenant:profiles!leases_tenant_id_fkey (
+            full_name
+          ),
+          unit:units (
+            name,
+            property:properties (
+              name
+            )
+          )
         `)
         .eq('is_active', true)
+
+      // Get all admins and managers for creating reminders
+      const { data: adminsManagers } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('role', ['admin', 'manager'])
 
       if (leasesError) {
         results.errors.push(`Error fetching leases: ${leasesError.message}`)
@@ -139,7 +155,8 @@ serve(async (req) => {
             (lease.includes_water ? (lease.water_amount || 0) : 0) +
             (lease.includes_hydro ? (lease.hydro_amount || 0) : 0)
 
-          const { error: insertError } = await supabase
+          // Create rent reminder
+          const { data: rentReminder, error: insertError } = await supabase
             .from('rent_reminders')
             .upsert({
               lease_id: lease.id,
@@ -152,11 +169,42 @@ serve(async (req) => {
               status: 'pending',
               is_late: false,
             }, { onConflict: 'lease_id,month' })
+            .select()
+            .single()
 
           if (insertError) {
             results.errors.push(`Error creating reminder for lease ${lease.id}: ${insertError.message}`)
           } else {
-            results.remindersCreated++
+            results.rentRemindersCreated++
+
+            // Create reminders for each admin/manager
+            if (adminsManagers && rentReminder) {
+              const tenantName = (lease.tenant as { full_name: string })?.full_name || 'Tenant'
+              const propertyName = (lease.unit as { property: { name: string } })?.property?.name || 'Property'
+              const unitName = (lease.unit as { name: string })?.name || 'Unit'
+              const monthName = new Date(currentMonth).toLocaleString('default', { month: 'long', year: 'numeric' })
+
+              for (const admin of adminsManagers) {
+                const { error: reminderError } = await supabase
+                  .from('reminders')
+                  .insert({
+                    user_id: admin.id,
+                    title: `Collect $${totalAmount.toFixed(0)} rent from ${tenantName}`,
+                    description: `${propertyName} - ${unitName} | ${monthName}`,
+                    due_date: currentMonth, // Due on the 1st
+                    is_completed: false,
+                    send_email: true,
+                    send_sms: false,
+                    rent_reminder_id: rentReminder.id,
+                  })
+
+                if (reminderError) {
+                  results.errors.push(`Error creating admin reminder: ${reminderError.message}`)
+                } else {
+                  results.adminRemindersCreated++
+                }
+              }
+            }
           }
         }
       }

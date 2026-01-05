@@ -87,6 +87,7 @@ export interface Reminder {
   is_completed: boolean
   send_email: boolean
   send_sms: boolean
+  rent_reminder_id?: string
   created_at: string
   updated_at: string
 }

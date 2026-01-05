@@ -92,8 +92,30 @@ CREATE TABLE reminders (
     is_completed BOOLEAN DEFAULT FALSE NOT NULL,
     send_email BOOLEAN DEFAULT TRUE,
     send_sms BOOLEAN DEFAULT FALSE,
+    rent_reminder_id UUID REFERENCES rent_reminders(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Rent reminders table (auto-generated monthly)
+CREATE TABLE rent_reminders (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    lease_id UUID REFERENCES leases(id) ON DELETE CASCADE NOT NULL,
+    month DATE NOT NULL,
+    base_rent DECIMAL(10,2) NOT NULL,
+    gas_amount DECIMAL(10,2) DEFAULT 0,
+    water_amount DECIMAL(10,2) DEFAULT 0,
+    hydro_amount DECIMAL(10,2) DEFAULT 0,
+    total_amount DECIMAL(10,2) NOT NULL,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'late')),
+    is_late BOOLEAN DEFAULT FALSE,
+    late_since DATE,
+    tenant_notified_at TIMESTAMPTZ,
+    admin_notified_at TIMESTAMPTZ,
+    paid_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    UNIQUE(lease_id, month)
 );
 
 -- Create indexes for better performance
@@ -105,6 +127,10 @@ CREATE INDEX idx_payments_lease_id ON payments(lease_id);
 CREATE INDEX idx_payments_month_year ON payments(year, month);
 CREATE INDEX idx_reminders_user_id ON reminders(user_id);
 CREATE INDEX idx_reminders_due_date ON reminders(due_date);
+CREATE INDEX idx_reminders_rent_reminder_id ON reminders(rent_reminder_id);
+CREATE INDEX idx_rent_reminders_lease_id ON rent_reminders(lease_id);
+CREATE INDEX idx_rent_reminders_month ON rent_reminders(month);
+CREATE INDEX idx_rent_reminders_status ON rent_reminders(status);
 
 -- Enable Row Level Security
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -113,6 +139,7 @@ ALTER TABLE units ENABLE ROW LEVEL SECURITY;
 ALTER TABLE leases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reminders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rent_reminders ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for profiles
 CREATE POLICY "Users can view their own profile"
@@ -296,6 +323,37 @@ CREATE POLICY "Users can manage their own reminders"
     ON reminders FOR ALL
     USING (user_id = auth.uid());
 
+-- RLS Policies for rent_reminders
+CREATE POLICY "Admins and managers can view all rent reminders"
+    ON rent_reminders FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE id = auth.uid()
+            AND role IN ('admin', 'manager')
+        )
+    );
+
+CREATE POLICY "Tenants can view their own rent reminders"
+    ON rent_reminders FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM leases
+            WHERE leases.id = rent_reminders.lease_id
+            AND leases.tenant_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Admins and managers can manage rent reminders"
+    ON rent_reminders FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE id = auth.uid()
+            AND role IN ('admin', 'manager')
+        )
+    );
+
 -- Function to automatically update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -330,6 +388,42 @@ CREATE TRIGGER update_reminders_updated_at
     BEFORE UPDATE ON reminders
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_rent_reminders_updated_at
+    BEFORE UPDATE ON rent_reminders
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to sync reminder completion with rent_reminder status
+-- When admin marks a reminder as complete, it also marks the associated rent_reminder as paid
+CREATE OR REPLACE FUNCTION sync_rent_reminder_on_complete()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Only process if reminder is being marked as complete and has a rent_reminder_id
+    IF NEW.is_completed = TRUE AND OLD.is_completed = FALSE AND NEW.rent_reminder_id IS NOT NULL THEN
+        UPDATE rent_reminders
+        SET
+            status = 'paid',
+            paid_at = NOW(),
+            updated_at = NOW()
+        WHERE id = NEW.rent_reminder_id;
+
+        -- Also mark all other reminders linked to this rent_reminder as complete
+        UPDATE reminders
+        SET is_completed = TRUE
+        WHERE rent_reminder_id = NEW.rent_reminder_id
+        AND id != NEW.id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ language 'plpgsql' SECURITY DEFINER;
+
+-- Trigger to sync completion status
+CREATE TRIGGER sync_rent_reminder_completion
+    AFTER UPDATE ON reminders
+    FOR EACH ROW
+    EXECUTE FUNCTION sync_rent_reminder_on_complete();
 
 -- Function to handle new user signup
 CREATE OR REPLACE FUNCTION handle_new_user()
