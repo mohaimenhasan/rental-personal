@@ -1,0 +1,30 @@
+name: Process Rent Reminders
+
+on:
+  schedule:
+    # Run daily at 9 AM Toronto time (EST: UTC-5, EDT: UTC-4)
+    # Using 2 PM UTC to cover both (9 AM EST / 10 AM EDT)
+    - cron: '0 14 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  process-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Rent Reminder Processing
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/process-rent-reminders" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "Error: Function returned non-200 status"
+            exit 1
+          fi
