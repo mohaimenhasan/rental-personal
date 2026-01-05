@@ -26,40 +26,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true
 
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (!mounted) return
-      if (error) {
-        console.error('Error getting session:', error)
+    // Initial session check
+    const initSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (!mounted) return
+        if (error) {
+          console.error('Error getting session:', error)
+          setLoading(false)
+          return
+        }
+        setSession(session)
+        setUser(session?.user ?? null)
         setLoading(false)
-        return
+        if (session?.user) {
+          fetchProfile(session.user.id)
+        }
+      } catch (error) {
+        console.error('Session error:', error)
+        if (mounted) setLoading(false)
       }
+    }
+
+    initSession()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
+      console.log('Auth state changed:', event)
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
         fetchProfile(session.user.id)
       } else {
-        setLoading(false)
+        setProfile(null)
       }
-    }).catch((error) => {
-      console.error('Session error:', error)
-      if (mounted) setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!mounted) return
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        await fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-        setLoading(false)
+    // Handle tab visibility change - refresh session when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (mounted && session?.user) {
+            setSession(session)
+            setUser(session.user)
+          }
+        })
       }
-    })
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       mounted = false
       subscription.unsubscribe()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 
