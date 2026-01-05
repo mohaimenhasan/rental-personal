@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useTenants, useUpdateUserRole } from '../hooks/useProfiles'
+import { useTenants, useUpdateUserRole, useInviteTenant } from '../hooks/useProfiles'
 import { useLeases, useCreateLease } from '../hooks/useLeases'
 import { useUnits } from '../hooks/useUnits'
 import { Modal } from '../components/Modal'
@@ -15,7 +15,9 @@ import {
   DollarSign,
   MoreVertical,
   UserCog,
-  FileText
+  FileText,
+  UserPlus,
+  Send
 } from 'lucide-react'
 import type { UserRole } from '../types/database'
 
@@ -25,10 +27,17 @@ export function Tenants() {
   const { data: units } = useUnits()
   const createLease = useCreateLease()
   const updateRole = useUpdateUserRole()
+  const inviteTenant = useInviteTenant()
 
   const [showLeaseModal, setShowLeaseModal] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
   const [selectedTenant, setSelectedTenant] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
+
+  const [inviteForm, setInviteForm] = useState({
+    email: '',
+    full_name: ''
+  })
 
   const [leaseForm, setLeaseForm] = useState({
     unit_id: '',
@@ -98,6 +107,21 @@ export function Tenants() {
     }
   }
 
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await inviteTenant.mutateAsync({
+        email: inviteForm.email,
+        full_name: inviteForm.full_name || undefined
+      })
+      toast.success('Invitation sent! They will receive an email to set up their account.')
+      setShowInviteModal(false)
+      setInviteForm({ email: '', full_name: '' })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send invitation')
+    }
+  }
+
   if (isLoading) return <PageLoader />
 
   return (
@@ -107,6 +131,13 @@ export function Tenants() {
           <h1 className="text-2xl font-bold text-gray-900">Tenants</h1>
           <p className="text-gray-600 mt-1">Manage your tenants and leases</p>
         </div>
+        <button
+          onClick={() => setShowInviteModal(true)}
+          className="btn btn-primary flex items-center gap-2"
+        >
+          <UserPlus className="h-5 w-5" />
+          Invite Tenant
+        </button>
       </div>
 
       {tenants && tenants.length > 0 ? (
@@ -378,6 +409,66 @@ export function Tenants() {
             </button>
             <button type="submit" disabled={createLease.isPending} className="btn btn-primary flex-1">
               {createLease.isPending ? 'Creating...' : 'Create Lease'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Invite Tenant Modal */}
+      <Modal
+        isOpen={showInviteModal}
+        onClose={() => {
+          setShowInviteModal(false)
+          setInviteForm({ email: '', full_name: '' })
+        }}
+        title="Invite Tenant"
+      >
+        <form onSubmit={handleInvite} className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Send an email invitation to a new tenant. They'll receive a link to create their account.
+          </p>
+
+          <div>
+            <label className="label">Email Address</label>
+            <input
+              type="email"
+              value={inviteForm.email}
+              onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+              className="input"
+              placeholder="tenant@example.com"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="label">Full Name (Optional)</label>
+            <input
+              type="text"
+              value={inviteForm.full_name}
+              onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })}
+              className="input"
+              placeholder="John Smith"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setShowInviteModal(false)
+                setInviteForm({ email: '', full_name: '' })
+              }}
+              className="btn btn-secondary flex-1"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={inviteTenant.isPending}
+              className="btn btn-primary flex-1 flex items-center justify-center gap-2"
+            >
+              <Send className="h-4 w-4" />
+              {inviteTenant.isPending ? 'Sending...' : 'Send Invitation'}
             </button>
           </div>
         </form>
