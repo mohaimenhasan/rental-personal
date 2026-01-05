@@ -62,18 +62,15 @@ export function PhoneRequiredModal({ onComplete }: PhoneRequiredModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="label">Phone Number</label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="input pl-10"
-                placeholder="+1 (416) 555-0123"
-                required
-                autoFocus
-              />
-            </div>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="input"
+              placeholder="+1 (416) 555-0123"
+              required
+              autoFocus
+            />
             <p className="text-xs text-gray-500 mt-1">
               Canadian/US format preferred
             </p>

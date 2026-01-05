@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Building2, Mail, ArrowLeft, CheckCircle } from 'lucide-react'
+import { Building2, ArrowLeft, CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export function ForgotPassword() {
@@ -59,17 +59,14 @@ export function ForgotPassword() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="label">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="input pl-10"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input"
+                  placeholder="you@example.com"
+                  required
+                />
               </div>
 
               <button

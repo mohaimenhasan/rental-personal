@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Building2, Mail, Lock, User, Eye, EyeOff, Phone } from 'lucide-react'
+import { Building2, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export function Signup() {
@@ -75,59 +75,49 @@ export function Signup() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="label">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="input pl-10"
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="input"
+                placeholder="John Doe"
+                required
+              />
             </div>
 
             <div>
               <label className="label">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input pl-10"
-                  placeholder="you@example.com"
-                  required
-                />
-              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input"
+                placeholder="you@example.com"
+                required
+              />
             </div>
 
             <div>
               <label className="label">Phone Number <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="input pl-10"
-                  placeholder="+1 (416) 555-0123"
-                  required
-                />
-              </div>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="input"
+                placeholder="+1 (416) 555-0123"
+                required
+              />
               <p className="text-xs text-gray-500 mt-1">Required for rent reminders</p>
             </div>
 
             <div>
               <label className="label">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input pl-10 pr-10"
+                  className="input pr-10"
                   placeholder="At least 6 characters"
                   required
                   minLength={6}
@@ -144,17 +134,14 @@ export function Signup() {
 
             <div>
               <label className="label">Confirm Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="input pl-10"
-                  placeholder="Confirm your password"
-                  required
-                />
-              </div>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="input"
+                placeholder="Confirm your password"
+                required
+              />
             </div>
 
             <button
