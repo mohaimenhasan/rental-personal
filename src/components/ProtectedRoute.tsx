@@ -23,6 +23,12 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  // If profile failed to load, still allow access to basic routes
+  // but redirect role-restricted routes to dashboard
+  if (allowedRoles && !profile) {
+    return <Navigate to="/dashboard" replace />
+  }
+
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
     return <Navigate to="/dashboard" replace />
   }
