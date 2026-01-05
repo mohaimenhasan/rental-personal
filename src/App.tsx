@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './contexts/AuthContext'
 import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Pages
 import { Login } from './pages/Login'
@@ -29,10 +30,11 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
@@ -115,9 +117,10 @@ function App() {
               },
             }}
           />
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }
 
